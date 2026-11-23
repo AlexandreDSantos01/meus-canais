@@ -10,6 +10,8 @@ const DADOS = new URL('site/dados/', RAIZ);
 const MAX_VIDEOS = 250;          // últimos N vídeos de cada canal
 const DIAS_HIST_VIDEO = 35;      // quanto tempo guardar a série de cada vídeo
 const DIAS_DETALHE_CANAL = 30;   // depois disso, o canal guarda 1 ponto por dia
+const DIAS_DETALHE_VIDEO = 3;    // depois disso, cada vídeo guarda 1 ponto por dia
+const SHORT_MAX_SEG = 180;       // Shorts têm até 3 minutos
 
 // .env simples (só para rodar no PC)
 const envArq = new URL('.env', RAIZ);
@@ -102,9 +104,9 @@ async function lerJson(nome, padrao) {
   try { return JSON.parse(await fs.readFile(new URL(nome, DADOS), 'utf8')); } catch { return padrao; }
 }
 
-// Pontos antigos do canal: fica só o último de cada dia
-function compactar(serie, agora) {
-  const limite = agora - DIAS_DETALHE_CANAL * 86400;
+// Pontos antigos: fica só o último de cada dia
+function compactar(serie, agora, dias) {
+  const limite = agora - dias * 86400;
   const porDia = new Map();
   const recentes = [];
   for (const p of serie) {
@@ -126,8 +128,11 @@ for (const cfg of canaisCfg) {
     atual.canais.push(canal);
     atual.videos.push(...videos);
     const s = (hist.canais[cfg.id] ||= []);
-    s.push([agora, canal.inscritos, canal.views, canal.videos]);
-    hist.canais[cfg.id] = compactar(s, agora);
+    // [hora, inscritos, views do canal, nº de vídeos, soma das views dos vídeos, soma das views dos Shorts]
+    const somaViews = videos.reduce((a, v) => a + v.views, 0);
+    const somaShorts = videos.filter((v) => v.duracao <= SHORT_MAX_SEG).reduce((a, v) => a + v.views, 0);
+    s.push([agora, canal.inscritos, canal.views, canal.videos, somaViews, somaShorts]);
+    hist.canais[cfg.id] = compactar(s, agora, DIAS_DETALHE_CANAL);
     for (const v of videos) (hist.videos[v.id] ||= []).push([agora, v.views]);
     console.log(`✓ ${cfg.nome}: ${canal.inscritos} inscritos, ${videos.length} vídeos`);
   } catch (e) {
@@ -147,7 +152,7 @@ const vivos = new Set(atual.videos.map((v) => v.id));
 const corte = agora - DIAS_HIST_VIDEO * 86400;
 for (const id of Object.keys(hist.videos)) {
   if (!vivos.has(id)) { delete hist.videos[id]; continue; }
-  hist.videos[id] = hist.videos[id].filter((p) => p[0] >= corte);
+  hist.videos[id] = compactar(hist.videos[id].filter((p) => p[0] >= corte), agora, DIAS_DETALHE_VIDEO);
 }
 
 await fs.mkdir(DADOS, { recursive: true });
