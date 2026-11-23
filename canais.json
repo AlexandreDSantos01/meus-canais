@@ -1,0 +1,30 @@
+[
+  {
+    "id": "shadowquest",
+    "nome": "Shadow Quest",
+    "youtube": "@Shadowquest83",
+    "tiktok": "",
+    "cor": "#8B5CF6"
+  },
+  {
+    "id": "bichobrabo",
+    "nome": "Bicho Brabo",
+    "youtube": "@BichoBrabo01",
+    "tiktok": "",
+    "cor": "#22C55E"
+  },
+  {
+    "id": "iasemfiltro",
+    "nome": "IA Sem Filtro",
+    "youtube": "@IASemFiltro86",
+    "tiktok": "",
+    "cor": "#22D3EE"
+  },
+  {
+    "id": "natureunfiltered",
+    "nome": "Nature Unfiltered",
+    "youtube": "@NatureUnfiltered83",
+    "tiktok": "",
+    "cor": "#FACC15"
+  }
+]

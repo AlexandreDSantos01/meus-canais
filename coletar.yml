@@ -1,0 +1,52 @@
+name: Coletar estatísticas e publicar painel
+
+on:
+  schedule:
+    - cron: '17 */3 * * *'   # a cada 3 horas
+  workflow_dispatch:          # botão "Run workflow" para rodar na hora
+  push:
+    branches: [main]
+    paths: ['site/**', 'canais.json', 'coletor/**']
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: coleta
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Coletar dados do YouTube
+        run: node coletor/coletar.mjs
+        env:
+          YT_API_KEY: ${{ secrets.YT_API_KEY }}
+
+      - name: Guardar histórico no repositório
+        run: |
+          git config user.name "coletor"
+          git config user.email "coletor@users.noreply.github.com"
+          git add site/dados
+          git diff --cached --quiet || git commit -m "dados: coleta $(date -u +'%Y-%m-%d %H:%M')"
+          git pull --rebase --autostash
+          git push
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
